@@ -1,7 +1,5 @@
 #include <Servo.h>
 #include <Wire.h>
-#include <JsonParser.h>
-#include <JsonGenerator.h>
 
 #include "common.h"
 
