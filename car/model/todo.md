@@ -1,3 +1,2 @@
 #Todo
 	[] Electronics
-	[] Gears
