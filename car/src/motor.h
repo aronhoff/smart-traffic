@@ -2,7 +2,7 @@
 #ifndef MOTOR_H
 #define MOTOR_H
 
-#include <arduino.h>
+#include <Arduino.h>
 
 class Motor {
 	private:
@@ -11,5 +11,5 @@ class Motor {
 		Motor();
 		void setSpeed(uint8_t speed);
 		uint8_t getSpeed();
-}
+};
 #endif
