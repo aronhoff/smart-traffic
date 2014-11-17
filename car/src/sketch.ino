@@ -1,7 +1,7 @@
 #include <Servo.h>
 #include <Wire.h>
 
-#include "common.h"
+#include "common/common.h"
 
 const int servoPin = 9;
 
