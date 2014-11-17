@@ -6,10 +6,10 @@
 
 class Motor {
 	private:
-		uint8_t mSpeed;
+		static int8_t mSpeed;
 	public:
-		Motor();
-		void setSpeed(uint8_t speed);
-		uint8_t getSpeed();
+		static void init();
+		static void setSpeed(int8_t speed);
+		static int8_t getSpeed();
 };
 #endif
