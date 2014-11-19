@@ -19,24 +19,27 @@ class Wireless {
 	private:
 		HardwareSerial& mSerial;
 
-		bool toSendInit = false;
-		bool toSendInitSystemTime = false;
-		bool toSendMotorUpdate = false;
-		bool toSendRequestMotorState = false;
-		bool toSendBatteryWarning = false;
+		void clean();
+
+		bool mToSendInit = false;
+		bool mToSendInitSystemTime = false;
+		bool mToSendMotorUpdate = false;
+		bool mToSendRequestMotorState = false;
+		bool mToSendBatteryWarning = false;
 		
-		uint64_t motorUpdateTime;
-		int8_t motorUpdateMotorSpeed;
-		int8_t motorUpdateSteerPosition;
+		// Only using 5 bytes for the time!
+		uint64_t mMotorUpdateTime;
+		int8_t mMotorUpdateMotorSpeed;
+		int8_t mMotorUpdateSteerPosition;
 
-		int8_t requestMotorStateSpeed;
-		int8_t requestMotorStateSteerPosition;
+		int8_t mRequestMotorStateSpeed;
+		int8_t mRequestMotorStateSteerPosition;
 
-		static const int messageInit = 1;
-		static const int messageSystemTime = 2;
-		static const int messageMotorUpdate = 3;
-		static const int messageMotorRequest = 4;
-		static const int messageBattery = 5;
+		static const int8_t messageInit = 1;
+		static const int8_t messageSystemTime = 2;
+		static const int8_t messageMotorUpdate = 3;
+		static const int8_t messageMotorRequest = 4;
+		static const int8_t messageBattery = 5;
 
 	public:
 		Wireless(HardwareSerial& serial);
