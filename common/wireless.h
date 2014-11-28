@@ -19,48 +19,44 @@ class Wireless {
 	private:
 		HardwareSerial& mSerial;
 
-		void clean();
-		void writeHeader();
-		void writeFooter();
-		bool readHeader();
-		bool readFooter();
-		void writeTime(uint64_t);
-		uint64_t readTime();
-		void write(uint8_t x);
-		uint8_t read();
+		static const uint8_t StoredMessages = 8;
+		static const uint8_t StoredMessageLength = 7; // Length of the longest possible message is currently 7
+		static const uint8_t BufferSize = 20;
+		
+		static const uint8_t CInit = 0;
+		static const uint8_t CConfirmReceive = 1;
+		static const uint8_t CMotorUpdate = 2;
+		static const uint8_t CMotorRequest = 3;
+		static const uint8_t CBatteryWarn = 4;
 
-		bool mToSendInit = false;
-		bool mToSendInitSystemTime = false;
-		bool mToSendMotorUpdate = false;
-		bool mToSendRequestMotorState = false;
-		bool mToSendBatteryWarning = false;
-		bool mToSendMessageIncorrect = false;
+		uint8_t mMessageNum = 0;
+		uint8_t mCommands[StoredMessages];
+		uint8_t mPayloads[StoredMessages][StoredMessageLength];
+		uint8_t mPayloadLengths[StoredMessages];
+		uint8_t mReceiveOK = ~0; // Use bitwise operiations!
+		uint8_t mBuffer[BufferSize];
+		uint8_t mBufferPos;
 
-		voidLongCall setTime;
-
-		// Only using 5 bytes for the time!
-		uint64_t mMotorUpdateTime;
-		int8_t mMotorUpdateMotorSpeed;
-		int8_t mMotorUpdateSteerPosition;
-
-		int8_t mRequestMotorStateSpeed;
-		int8_t mRequestMotorStateSteerPosition;
-
-		static const int8_t messageInit = 1;
-		static const int8_t messageMotorUpdate = 2;
-		static const int8_t messageMotorRequest = 3;
-		static const int8_t messageBattery = 4;
-		static const int8_t messageMessageIncorrect = 5;
+		// Send command with payload
+		void send(uint8_t command, uint8_t* payload, uint8_t length);
+		// Send message with message number
+		void sendNum(uint8_t num);
+		// Print byte on serial port in hexadecimal format
+		void printHex(uint8_t x);
+		// Read hexadecimal byte from buffer at pos
+		uint8_t parseHex(uint8_t pos);
+		// Clean buffer
+		void cleanBuffer();
+		// Parse message from the buffer
+		void parse();
+		// Send message confirmation
+		void confirmMessage(uint8_t id);
 
 	public:
 		Wireless(HardwareSerial& serial);
+		void begin();
 
-		int available();
-
-		// Server -> car	Place car on starting position
 		void init();
-		// Server -> car	Initialize system time
-		void initSystemTime();
 		// Server -> car	Inform car about a new obstacle
 //		void sendObstacle(/*position*/);
 		// Server -> car	Inform car about obstacle removed
@@ -81,16 +77,8 @@ class Wireless {
 //		void allowCrossing();
 		// Car -> server	Send low battery warning
 		void sendBatteryWarning();
-		// Both				Message not received correctly
-		void sendMessageIncorrect();
-		// Both				Sends outstanding data
-		void send();
 
 		// Both				Receive outstanding data
 		void receive();
-
-		typedef void (*voidCall)();
-		typedef void (*voidLongCall)(uint64_t);
-		void setSetTime(voidLongCall call);
 };
 #endif
