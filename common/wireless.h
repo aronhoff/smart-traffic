@@ -16,46 +16,11 @@
 // battery
 
 class Wireless {
-	private:
-		HardwareSerial& mSerial;
-
-		static const uint8_t StoredMessages = 8;
-		static const uint8_t StoredMessageLength = 7; // Length of the longest possible message is currently 7
-		static const uint8_t BufferSize = 20;
-		
-		static const uint8_t CInit = 0;
-		static const uint8_t CConfirmReceive = 1;
-		static const uint8_t CMotorUpdate = 2;
-		static const uint8_t CMotorRequest = 3;
-		static const uint8_t CBatteryWarn = 4;
-
-		uint8_t mMessageNum = 0;
-		uint8_t mCommands[StoredMessages];
-		uint8_t mPayloads[StoredMessages][StoredMessageLength];
-		uint8_t mPayloadLengths[StoredMessages];
-		uint8_t mReceiveOK = ~0; // Use bitwise operiations!
-		uint8_t mBuffer[BufferSize];
-		uint8_t mBufferPos;
-
-		// Send command with payload
-		void send(uint8_t command, uint8_t* payload, uint8_t length);
-		// Send message with message number
-		void sendNum(uint8_t num);
-		// Print byte on serial port in hexadecimal format
-		void printHex(uint8_t x);
-		// Read hexadecimal byte from buffer at pos
-		uint8_t parseHex(uint8_t pos);
-		// Clean buffer
-		void cleanBuffer();
-		// Parse message from the buffer
-		void parse();
-		// Send message confirmation
-		void confirmMessage(uint8_t id);
-
 	public:
 		Wireless(HardwareSerial& serial);
 		void begin();
 
+		// Car -> server	Synchronize system time
 		void init();
 		// Server -> car	Inform car about a new obstacle
 //		void sendObstacle(/*position*/);
@@ -80,5 +45,54 @@ class Wireless {
 
 		// Both				Receive outstanding data
 		void receive();
+
+		typedef void (*voidCall)();
+		typedef void (*voidUlongCall)(uint64_t);
+		typedef uint64_t (*ulongCall)();
+
+		void setTimeSetter(voidUlongCall call);
+		void setTimeGetter(ulongCall call);
+		void setInit(voidCall call);
+
+	private:
+		HardwareSerial& mSerial;
+
+		static const uint8_t StoredMessages = 8;
+		static const uint8_t StoredMessageLength = 7; // Length of the longest possible message is currently 7
+		static const uint8_t BufferSize = 20;
+		
+		static const uint8_t CTimeQuery = 0;
+		static const uint8_t CTimeResponse = 1;
+		static const uint8_t CConfirmReceive = 2;
+		static const uint8_t CMotorUpdate = 3;
+		static const uint8_t CMotorRequest = 4;
+		static const uint8_t CBatteryWarn = 5;
+
+		uint8_t mMessageNum = 0;
+		uint8_t mCommands[StoredMessages];
+		uint8_t mPayloads[StoredMessages][StoredMessageLength];
+		uint8_t mPayloadLengths[StoredMessages];
+		uint8_t mReceiveOK = ~0; // Use bitwise operiations!
+		uint8_t mBuffer[BufferSize];
+		uint8_t mBufferPos;
+
+		// Send command with payload
+		void send(uint8_t command, uint8_t* payload, uint8_t length);
+		// Send message with message number
+		void sendNum(uint8_t num);
+		// Print byte on serial port in hexadecimal format
+		void printHex(uint8_t x);
+		// Read hexadecimal byte from buffer at pos
+		uint8_t parseHex(uint8_t pos);
+		// Clean buffer
+		void cleanBuffer();
+		// Parse message from the buffer
+		void parse();
+		// Send message confirmation
+		void confirmMessage(uint8_t id);
+
+		voidUlongCall mTimeSetter;
+		ulongCall mTimeGetter;
+		voidCall mInit;
 };
 #endif

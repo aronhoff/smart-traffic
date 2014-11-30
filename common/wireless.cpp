@@ -7,7 +7,8 @@ void Wireless::begin() {
 }
 
 void Wireless::init() {
-	// Do stuff
+	send(CTimeQuery, NULL, 0);
+	mReceiveOK |= (1 << mMessageNum); // Do not retry
 }
 
 void Wireless::sendMotorUpdate(uint64_t time, int8_t speed, int8_t steer) {
@@ -94,9 +95,47 @@ void Wireless::parse() {
 	// Payload
 	while(mBuffer[pos] != 'P') if(mBufferPos == pos) return; // Very bad stuff
 	pos++;
+	int timeout = 50000;
 	switch(command) {
-		case CInit: {
-			// Do stuff
+		case CTimeQuery: {
+			send(CTimeResponse, NULL, 0);
+			mReceiveOK |= (1 << mMessageNum); // Do not retry
+			uint64_t time = mTimeGetter();
+			while((!mSerial.available() || mSerial.read() != 'X') && mTimeGetter()-time < timeout) {} // Deletes further messages!! (they will be re-sent) Better way?
+			if(mTimeGetter()-time < timeout) break;			// Bad (timeout). Do sth?
+			time = mTimeGetter();
+			mSerial.print("X");
+			time = mTimeGetter();
+			while((!mSerial.available() || mSerial.read() != 'X') && mTimeGetter()-time < timeout) {}
+			if(mTimeGetter()-time < timeout) break;			// Bad (timeout). Do sth?
+			time = mTimeGetter();
+			for(uint8_t i = 4; i >= 0; i--)
+				printHex((time >> (i*8)) & 0xFF);
+			break;
+		}
+		case CTimeResponse: {
+			mSerial.print("X");
+			uint64_t time = mTimeGetter();
+			uint64_t t1, t2;
+			while(!mSerial.available() && mTimeGetter()-time < timeout) {}
+			if(mTimeGetter()-time < timeout) break;			// Bad (timeout). Do sth?
+			t1 = mTimeGetter();
+			mSerial.print("X");
+			time = mTimeGetter();
+			while(mSerial.available() < 2 && mTimeGetter()-time < timeout) {}
+			if(mTimeGetter()-time < timeout) break;			// Bad (timeout). Do sth?
+			t2 = mTimeGetter();
+			while(mSerial.available() < 6 && mTimeGetter()-time < timeout) {}
+			if(mTimeGetter()-time < timeout) break;			// Bad (timeout). Do sth?
+			mSerial.read();
+			time = 0;
+			for(uint8_t i = 0; i < 5; i++) {
+				time <<= 8;
+				time &= mSerial.read();
+			}
+			// I'm trusting no parity check is needed. Should I?
+			// Use correction for the time it takes to get the time sent??
+			mTimeSetter(time + (t2-t1)/2);
 			break;
 		}
 		case CConfirmReceive: {
@@ -171,3 +210,12 @@ void Wireless::cleanBuffer() {
 	mBufferPos = 0;
 }
 
+void Wireless::setTimeSetter(voidUlongCall call) {
+	mTimeSetter = call;
+}
+void Wireless::setTimeGetter(ulongCall call) {
+	mTimeGetter = call;
+}
+void Wireless::setInit(voidCall call) {
+	mInit = call;
+}
