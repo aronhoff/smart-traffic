@@ -6,10 +6,11 @@
 
 class Motor {
 	private:
-		static int8_t mSpeed;
+		int8_t mSpeed = 0;
+		static bool isThereAnInstanceAlready; // Descriptive enough?
 	public:
-		static void init();
-		static void setSpeed(int8_t speed);
-		static int8_t getSpeed();
+		void init();
+		void setSpeed(int8_t speed);
+		int8_t getSpeed();
 };
 #endif

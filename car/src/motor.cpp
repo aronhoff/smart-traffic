@@ -3,9 +3,14 @@
 #include <Wire.h>
 #include "common/common.h"
 
-int8_t mSpeed = 0;
+bool Motor::isThereAnInstanceAlready = false;
 
 void Motor::init() {
+	if(isThereAnInstanceAlready) {
+		// DO NOT DO THIS!
+		return;
+	}
+	isThereAnInstanceAlready = true;
 	Wire.begin();
 }
 
