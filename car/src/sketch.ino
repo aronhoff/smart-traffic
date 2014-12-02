@@ -2,15 +2,13 @@
 #include "common/common.h"
 #include "common/wireless.h"
 
-Wireless wireless(Serial);
+Wireless wireless(Serial, &getTime, &setTime);
 uint64_t timeOffset = 0;
 Motor motor;
 
 void setup() {
 	//Initialize wireless
 	wireless.begin();
-	wireless.setTimeSetter(&setTime);
-	wireless.setTimeGetter(&getTime);
 	wireless.init();
 	//Initialize servo
 	//Initialize TWI for motor control
@@ -20,7 +18,7 @@ void setup() {
 
 void loop() {
 	//Check for new messages and receive them
-	wireless.receive();
+	wireless.update();
 	//Update position
 	//Update track
 	//Steer and control motor

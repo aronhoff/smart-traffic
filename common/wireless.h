@@ -17,11 +17,17 @@
 
 class Wireless {
 	public:
-		Wireless(HardwareSerial& serial);
+		typedef void (*voidCall)();
+		typedef void (*voidUlongCall)(uint64_t);
+		typedef uint64_t (*ulongCall)();
+
+		Wireless(HardwareSerial& serial, ulongCall timeGetter, voidUlongCall timeSetter);
 		void begin();
 
-		// Car -> server	Synchronize system time
+		// 					Initialize system
 		void init();
+		// Car -> server	Synchronize system time
+		void syncTime();
 		// Server -> car	Inform car about a new obstacle
 //		void sendObstacle(/*position*/);
 		// Server -> car	Inform car about obstacle removed
@@ -42,17 +48,8 @@ class Wireless {
 //		void allowCrossing();
 		// Car -> server	Send low battery warning
 		void sendBatteryWarning();
-
-		// Both				Receive outstanding data
-		void receive();
-
-		typedef void (*voidCall)();
-		typedef void (*voidUlongCall)(uint64_t);
-		typedef uint64_t (*ulongCall)();
-
-		void setTimeSetter(voidUlongCall call);
-		void setTimeGetter(ulongCall call);
-		void setInit(voidCall call);
+		//Both
+		void update();
 
 	private:
 		HardwareSerial& mSerial;
@@ -60,6 +57,7 @@ class Wireless {
 		static const uint8_t StoredMessages = 8;
 		static const uint8_t StoredMessageLength = 7; // Length of the longest possible message is currently 7
 		static const uint8_t BufferSize = 20;
+		static const uint32_t Timeout = 500000; // Microseconds
 		
 		static const uint8_t CTimeQuery = 0;
 		static const uint8_t CTimeResponse = 1;
@@ -73,13 +71,18 @@ class Wireless {
 		uint8_t mPayloads[StoredMessages][StoredMessageLength];
 		uint8_t mPayloadLengths[StoredMessages];
 		uint8_t mReceiveOK = ~0; // Use bitwise operiations!
+		uint64_t mSendTime[StoredMessages];
 		uint8_t mBuffer[BufferSize];
 		uint8_t mBufferPos;
 
+		// Receive outstanding data
+		void receive();
 		// Send command with payload
 		void send(uint8_t command, uint8_t* payload, uint8_t length);
 		// Send message with message number
 		void sendNum(uint8_t num);
+		// Resend unconfirmed messages
+		void resend();
 		// Print byte on serial port in hexadecimal format
 		void printHex(uint8_t x);
 		// Read hexadecimal byte from buffer at pos
@@ -90,9 +93,16 @@ class Wireless {
 		void parse();
 		// Send message confirmation
 		void confirmMessage(uint8_t id);
+		// Time query handler
+		void onTimeQuery();
+		// Time response handler
+		void onTimeResponse();
+		// Gets time from mTimeGetter
+		uint64_t getTime();
+		// Sets time using mTimeSetter
+		void setTime(uint64_t time);
 
 		voidUlongCall mTimeSetter;
 		ulongCall mTimeGetter;
-		voidCall mInit;
 };
 #endif

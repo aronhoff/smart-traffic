@@ -1,12 +1,20 @@
 #include "wireless.h"
 
-Wireless::Wireless(HardwareSerial& serial) : mSerial(serial) {}
+Wireless::Wireless(HardwareSerial& serial, ulongCall timeGetter, voidUlongCall timeSetter) : mSerial(serial),
+		 mTimeGetter(timeGetter),
+		 mTimeSetter(timeSetter)
+{}
 
 void Wireless::begin() {
 	mSerial.begin(57600);
 }
 
 void Wireless::init() {
+	// Do something?
+	// Might be needed later
+}
+
+void Wireless::syncTime() {
 	send(CTimeQuery, NULL, 0);
 }
 
@@ -29,11 +37,15 @@ void Wireless::sendBatteryWarning() {
 	send(CBatteryWarn, NULL, 0);
 }
 
+void Wireless::update() {
+	receive();
+	resend();
+}
+
 void Wireless::send(uint8_t command, uint8_t* payload, uint8_t length) {
 	mMessageNum++;
 	mMessageNum %= StoredMessages;
 	while(mReceiveOK ^ (1<<mMessageNum)) {				// Message was not received!
-		sendNum(mMessageNum);							// Try resending it
 		mMessageNum++; mMessageNum %= StoredMessages;
 	}
 	mCommands[mMessageNum] = command;
@@ -47,6 +59,7 @@ void Wireless::send(uint8_t command, uint8_t* payload, uint8_t length) {
 }
 
 void Wireless::sendNum(uint8_t num) {
+	mSendTime[num] = getTime();
 	uint8_t parity = 0;
 	mSerial.print("I");		// ID		
 	printHex(num);
@@ -76,6 +89,67 @@ void Wireless::receive() {
 	}
 }
 
+void Wireless::resend() {
+	for(uint8_t i = 0; i < StoredMessages; i++) {
+		if(!(mReceiveOK & (1 << i)) && getTime() - mSendTime[i] > Timeout) {
+			sendNum(i);
+		}
+	}
+}
+
+void Wireless::onTimeQuery() {
+	uint16_t timeout = 50000; // Microseconds
+	send(CTimeResponse, NULL, 0);
+	mReceiveOK |= (1 << mMessageNum); // Do not retry
+	uint64_t time = getTime();
+	while((!mSerial.available() || mSerial.read() != 'X')
+	   && getTime()-time < timeout) {} // Deletes further messages!! (they will be re-sent) Better way?
+	if(getTime()-time < timeout) return;			// Bad (timeout). Do sth?
+	mSerial.print("X");
+	// Now in sync
+	time = getTime();
+	while(!mSerial.available() && getTime()-time < timeout) {}
+	if(getTime()-time < timeout) return;			// Bad (timeout). Do sth?
+	time = getTime();
+	for(uint8_t i = 4; i >= 0; i--)
+		printHex((time >> (i*8)) & 0xFF);
+	mSerial.read(); // Discard an X
+}
+
+void Wireless::onTimeResponse() {
+	uint16_t timeout = 50000; // Microseconds
+	mSerial.print("X");
+	uint64_t time = getTime();
+	uint64_t t1, t2;
+	while(!mSerial.available() && getTime()-time < timeout) {}
+	if(getTime()-time < timeout) return;			// Bad (timeout). Do sth?
+	mSerial.read(); // Discard X
+	// Now in sync
+	t1 = getTime(); // Record initial time
+	mSerial.print("X");
+	time = getTime();
+	while(!mSerial.available() && getTime()-time < timeout) {}
+	if(getTime()-time < timeout) return;			// Bad (timeout). Do sth?
+	t2 = getTime(); // Record final time
+	// Read the time sent
+	while(mSerial.available() < 6 && getTime()-time < timeout) {}
+	if(getTime()-time < timeout) return;			// Bad (timeout). Do sth?
+	mSerial.read(); // Discard X
+	time = 0;
+	for(uint8_t i = 0; i < 5; i++) {
+		time <<= 8;
+		time &= mSerial.read();
+	}
+	time += (t2-t1)/2;
+	// Update send times of other messages
+	int64_t difference = time - getTime();
+	for(uint8_t i = 0; i < StoredMessages; i++)
+		mSendTime[i] += difference;
+	// I'm trusting no parity check is needed. Should I?
+	// Use correction for the time it takes to get the time sent??
+	setTime(time);
+}
+
 void Wireless::parse() {
 	uint8_t pos = 0;
 	// ID
@@ -94,51 +168,13 @@ void Wireless::parse() {
 	// Payload
 	while(mBuffer[pos] != 'P') if(mBufferPos == pos) return; // Very bad stuff
 	pos++;
-	int timeout = 50000;
 	switch(command) {
 		case CTimeQuery: {
-			send(CTimeResponse, NULL, 0);
-			mReceiveOK |= (1 << mMessageNum); // Do not retry
-			uint64_t time = mTimeGetter();
-			while((!mSerial.available() || mSerial.read() != 'X') && mTimeGetter()-time < timeout) {} // Deletes further messages!! (they will be re-sent) Better way?
-			if(mTimeGetter()-time < timeout) break;			// Bad (timeout). Do sth?
-			mSerial.print("X");
-			// Now in sync
-			time = mTimeGetter();
-			while(!mSerial.available() && mTimeGetter()-time < timeout) {}
-			if(mTimeGetter()-time < timeout) break;			// Bad (timeout). Do sth?
-			time = mTimeGetter();
-			for(uint8_t i = 4; i >= 0; i--)
-				printHex((time >> (i*8)) & 0xFF);
-			mSerial.read(); // Discard an X
+			onTimeQuery();
 			break;
 		}
 		case CTimeResponse: {
-			mSerial.print("X");
-			uint64_t time = mTimeGetter();
-			uint64_t t1, t2;
-			while(!mSerial.available() && mTimeGetter()-time < timeout) {}
-			if(mTimeGetter()-time < timeout) break;			// Bad (timeout). Do sth?
-			mSerial.read(); // Discard X
-			// Now in sync
-			t1 = mTimeGetter(); // Record initial time
-			mSerial.print("X");
-			time = mTimeGetter();
-			while(!mSerial.available() && mTimeGetter()-time < timeout) {}
-			if(mTimeGetter()-time < timeout) break;			// Bad (timeout). Do sth?
-			t2 = mTimeGetter(); // Record final time
-			// Read the time sent
-			while(mSerial.available() < 6 && mTimeGetter()-time < timeout) {}
-			if(mTimeGetter()-time < timeout) break;			// Bad (timeout). Do sth?
-			mSerial.read(); // Discard X
-			time = 0;
-			for(uint8_t i = 0; i < 5; i++) {
-				time <<= 8;
-				time &= mSerial.read();
-			}
-			// I'm trusting no parity check is needed. Should I?
-			// Use correction for the time it takes to get the time sent??
-			mTimeSetter(time + (t2-t1)/2);
+			onTimeResponse();
 			break;
 		}
 		case CConfirmReceive: {
@@ -213,12 +249,10 @@ void Wireless::cleanBuffer() {
 	mBufferPos = 0;
 }
 
-void Wireless::setTimeSetter(voidUlongCall call) {
-	mTimeSetter = call;
+uint64_t Wireless::getTime() {
+	return mTimeGetter();
 }
-void Wireless::setTimeGetter(ulongCall call) {
-	mTimeGetter = call;
-}
-void Wireless::setInit(voidCall call) {
-	mInit = call;
+
+void Wireless::setTime(uint64_t time) {
+	mTimeSetter(time);
 }
