@@ -8,7 +8,6 @@ void Wireless::begin() {
 
 void Wireless::init() {
 	send(CTimeQuery, NULL, 0);
-	mReceiveOK |= (1 << mMessageNum); // Do not retry
 }
 
 void Wireless::sendMotorUpdate(uint64_t time, int8_t speed, int8_t steer) {
@@ -103,14 +102,15 @@ void Wireless::parse() {
 			uint64_t time = mTimeGetter();
 			while((!mSerial.available() || mSerial.read() != 'X') && mTimeGetter()-time < timeout) {} // Deletes further messages!! (they will be re-sent) Better way?
 			if(mTimeGetter()-time < timeout) break;			// Bad (timeout). Do sth?
-			time = mTimeGetter();
 			mSerial.print("X");
+			// Now in sync
 			time = mTimeGetter();
-			while((!mSerial.available() || mSerial.read() != 'X') && mTimeGetter()-time < timeout) {}
+			while(!mSerial.available() && mTimeGetter()-time < timeout) {}
 			if(mTimeGetter()-time < timeout) break;			// Bad (timeout). Do sth?
 			time = mTimeGetter();
 			for(uint8_t i = 4; i >= 0; i--)
 				printHex((time >> (i*8)) & 0xFF);
+			mSerial.read(); // Discard an X
 			break;
 		}
 		case CTimeResponse: {
@@ -119,15 +119,18 @@ void Wireless::parse() {
 			uint64_t t1, t2;
 			while(!mSerial.available() && mTimeGetter()-time < timeout) {}
 			if(mTimeGetter()-time < timeout) break;			// Bad (timeout). Do sth?
-			t1 = mTimeGetter();
+			mSerial.read(); // Discard X
+			// Now in sync
+			t1 = mTimeGetter(); // Record initial time
 			mSerial.print("X");
 			time = mTimeGetter();
-			while(mSerial.available() < 2 && mTimeGetter()-time < timeout) {}
+			while(!mSerial.available() && mTimeGetter()-time < timeout) {}
 			if(mTimeGetter()-time < timeout) break;			// Bad (timeout). Do sth?
-			t2 = mTimeGetter();
+			t2 = mTimeGetter(); // Record final time
+			// Read the time sent
 			while(mSerial.available() < 6 && mTimeGetter()-time < timeout) {}
 			if(mTimeGetter()-time < timeout) break;			// Bad (timeout). Do sth?
-			mSerial.read();
+			mSerial.read(); // Discard X
 			time = 0;
 			for(uint8_t i = 0; i < 5; i++) {
 				time <<= 8;
