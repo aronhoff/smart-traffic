@@ -1,7 +1,7 @@
-#include <Arduino.h>
 #include <TinyWireS.h>
 #include <CustomStepper.h>
-#include "common/common.h"
+
+const uint8_t I2C_SLAVE_ADDRESS = 0x4;
 
 CustomStepper stepper(0, 1, 2, 3, (byte[]){8, B1000, B1100, B0100, B0110, B0010, B0011, B0001, B1001}, 4075.7728395, 12, CCW);
 
