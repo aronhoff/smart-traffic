@@ -2,6 +2,9 @@
 #define COMMON_H
 
 const int Wireless_BaudRate = 57600;
-const uint8_t Motor_Address = 64;
+
+typedef void (*voidCall)();
+typedef void (*voidUlongCall)(uint64_t);
+typedef uint64_t (*ulongCall)();
 
 #endif

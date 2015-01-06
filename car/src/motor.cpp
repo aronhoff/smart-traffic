@@ -3,20 +3,15 @@
 #include <Wire.h>
 #include "common/common.h"
 
-bool Motor::isThereAnInstanceAlready = false;
+#define MOTOR_ADDRESS 0x4
 
 void Motor::init() {
-	if(isThereAnInstanceAlready) {
-		// DO NOT DO THIS!
-		return;
-	}
-	isThereAnInstanceAlready = true;
 	Wire.begin();
 }
 
 void Motor::setSpeed(int8_t speed) {
 	mSpeed = speed;
-	Wire.beginTransmission(Motor_Address);
+	Wire.beginTransmission(MOTOR_ADDRESS);
 	Wire.write(mSpeed);
 	Wire.endTransmission();
 }

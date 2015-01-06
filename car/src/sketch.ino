@@ -1,28 +1,42 @@
-#include "motor.h"
+#include <Servo.h>
 #include "common/common.h"
+#include "motor.h"
 #include "common/wireless.h"
 
 Wireless wireless(Serial, &getTime, &setTime);
 uint64_t timeOffset = 0;
 Motor motor;
+/* Current servo range:
+ *   60 degrees  - full left
+ *   90 degrees  - centre
+ *   120 degrees - full right
+ */
+Servo servo;
 
 void setup() {
-	//Initialize wireless
-	wireless.begin();
-	wireless.init();
 	//Initialize servo
+	servo.attach(3);
+	// Calibrate servo
+	servo.write(90);
+	delay(5000);
+
+	//Initialize wireless
+	/*wireless.begin();
+	wireless.init();*/
+
 	//Initialize TWI for motor control
+	motor = Motor();
 	motor.init();
-	//Initialize accelerometer
+	
+	//Set
+	motor.setSpeed(0);
+	servo.write(60);
 }
 
 void loop() {
 	//Check for new messages and receive them
-	wireless.update();
-	//Update position
-	//Update track
+	// wireless.update();
 	//Steer and control motor
-	//Read accelerometer
 	//Send messages
 }
 

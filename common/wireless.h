@@ -17,10 +17,6 @@
 
 class Wireless {
 	public:
-		typedef void (*voidCall)();
-		typedef void (*voidUlongCall)(uint64_t);
-		typedef uint64_t (*ulongCall)();
-
 		Wireless(HardwareSerial& serial, ulongCall timeGetter, voidUlongCall timeSetter);
 		void begin();
 
