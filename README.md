@@ -3,7 +3,7 @@ Smart Traffic
 
 Self-driving car project concerned with the future of traffic for the BT Young Scientist and Technology Exhibition 2015
 
-Read our [Project Book](https://github.com/thehoffmann/smart-traffic/raw/master/BTYSEProjectBook.pdf)!
+Read our [Project Book](https://github.com/thehoffmann/smart-traffic/raw/master/BTYSEProjectBook.pdf), or look at some [photos](photos)!
 
 ~~Find us in the RDS at stand number **3609** from 7th to 10th of January!~~  The exhibition is now over, thanks for everyone who visited us.
 
